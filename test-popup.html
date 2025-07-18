@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Popup - testingstoresumeet.myshopify.com</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 40px;
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .hero p {
+            margin: 10px 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .console-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .console-info h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>🛍️ Test Store Homepage</h1>
+        <p>Testing PapaPop integration - testingstoresumeet.myshopify.com</p>
+    </div>
+
+    <div class="console-info">
+        <h4>🔍 Console Instructions:</h4>
+        <p>Open your browser's developer console (F12) to see PapaPop logs.</p>
+        <p>Look for messages starting with <strong>[PapaPop]</strong></p>
+        <p>A popup should appear after 3 seconds if everything is working!</p>
+    </div>
+
+    <div class="content">
+        <div class="card">
+            <h3>Featured Products</h3>
+            <p>This is a test homepage to see if the popup script loads and displays properly. The popup should show after 3 seconds.</p>
+        </div>
+        <div class="card">
+            <h3>Special Offers</h3>
+            <p>Check the console for detailed logging about popup loading, filtering, and trigger setup.</p>
+        </div>
+        <div class="card">
+            <h3>Customer Reviews</h3>
+            <p>The popup script will detect this as a homepage and should display our test popup.</p>
+        </div>
+    </div>
+
+    <div class="console-info">
+        <h4>🎯 Expected Popup Details:</h4>
+        <ul>
+            <li>Title: "Test Popup - Backend Created"</li>
+            <li>Heading: "🎉 Welcome to Our Store!"</li>
+            <li>Description: "Get 15% off your first order when you sign up for our newsletter."</li>
+            <li>Button: "Get My Discount"</li>
+            <li>Discount Code: "WELCOME15"</li>
+            <li>Trigger: 3 seconds after page load</li>
+        </ul>
+    </div>
+
+    <!-- Set up Shopify object for testing -->
+    <script>
+        window.Shopify = {
+            shop: "testingstoresumeet.myshopify.com"
+        };
+    </script>
+
+    <!-- Load PapaPop script -->
+    <script src="https://papapop.vercel.app/popup-script.js"></script>
+</body>
+</html>

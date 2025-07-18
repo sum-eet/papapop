@@ -476,15 +476,15 @@ export default function NewPopup() {
     
     event.preventDefault();
     const form = event.currentTarget;
-    const formData = new FormData(form);
+    const formDataObj = new FormData(form);
     
     // Add steps data
-    formData.set("steps", JSON.stringify(steps));
-    formData.set("targetPages", JSON.stringify(formData.targetPages));
-    formData.set("targetDevices", JSON.stringify(formData.targetDevices));
+    formDataObj.set("steps", JSON.stringify(steps));
+    formDataObj.set("targetPages", JSON.stringify(formData.targetPages));
+    formDataObj.set("targetDevices", JSON.stringify(formData.targetDevices));
     
     console.log("📋 Final form data being submitted:");
-    for (const [key, value] of formData.entries()) {
+    for (const [key, value] of formDataObj.entries()) {
       console.log(`  ${key}:`, value);
     }
     
