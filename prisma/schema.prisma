@@ -1,0 +1,232 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// CRITICAL: Shopify session storage
+model Session {
+  id          String   @id
+  shop        String
+  state       String
+  isOnline    Boolean  @default(false)
+  scope       String?
+  expires     DateTime?
+  accessToken String
+  userId      BigInt?
+  firstName   String?
+  lastName    String?
+  email       String?
+  accountOwner Boolean  @default(false)
+  locale      String?
+  collaborator Boolean? @default(false)
+  emailVerified Boolean? @default(false)
+}
+
+// Multi-step popup configuration
+model Popup {
+  id            String   @id @default(cuid())
+  shop          String
+  title         String
+  isActive      Boolean  @default(true)
+  
+  // Popup type and steps
+  popupType     String   @default("single_step") // "single_step", "multi_step"
+  steps         Json?    // Store step configuration as JSON
+  
+  // Basic single-step fields (backward compatibility)
+  triggerType   String   // "delay", "scroll", "exit", "page_specific", "cart_abandonment"
+  triggerValue  Int      // seconds, percentage, etc.
+  heading       String
+  description   String?
+  buttonText    String   @default("Get Discount")
+  discountCode  String?
+  
+  // Advanced targeting
+  targetPages   Json?    // Which pages to show: ["homepage", "product", "collection"]
+  targetDevices Json?    // ["desktop", "mobile", "tablet"]
+  repeatInSession Boolean @default(false) // Show multiple times per session
+  maxViewsPerSession Int @default(1)
+  
+  // Display settings
+  position      String   @default("center") // "center", "bottom", "top", "side"
+  theme         Json?    // Color, fonts, styling configuration
+  
+  // Performance tracking
+  views         Int      @default(0)
+  conversions   Int      @default(0)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  analytics     PopupAnalytics[]
+  userSessions  UserSession[]
+  emailCaptures EmailCapture[]
+  quizResponses QuizResponse[]
+  
+  @@index([shop, isActive])
+  @@index([triggerType])
+}
+
+// Comprehensive user session tracking
+model UserSession {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique // Browser session ID
+  shop          String
+  
+  // User identification (anonymous)
+  fingerprint   String?  // Browser fingerprint
+  ipAddress     String?
+  userAgent     String?
+  
+  // Geographic data
+  country       String?
+  region        String?
+  city          String?
+  timezone      String?
+  
+  // Device/browser info
+  deviceType    String?  // "desktop", "mobile", "tablet"
+  browserName   String?
+  browserVersion String?
+  osName        String?
+  osVersion     String?
+  screenWidth   Int?
+  screenHeight  Int?
+  
+  // Behavior tracking
+  pageViews     Int      @default(0)
+  totalTimeSpent Int     @default(0) // seconds
+  maxScrollPercentage Int @default(0)
+  bounceRate    Float?
+  
+  // Traffic source
+  referrer      String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  utmTerm       String?
+  utmContent    String?
+  
+  // Session timestamps
+  firstVisit    DateTime @default(now())
+  lastActivity  DateTime @default(now())
+  
+  // Relations
+  pageViewRecords PageView[]
+  popupViews    PopupAnalytics[]
+  emailCaptures EmailCapture[]
+  quizResponses QuizResponse[]
+  popup         Popup?   @relation(fields: [popupId], references: [id])
+  popupId       String?
+  
+  @@index([sessionId])
+  @@index([shop])
+  @@index([firstVisit])
+}
+
+// Page-level tracking
+model PageView {
+  id            String   @id @default(cuid())
+  sessionId     String
+  userSession   UserSession @relation(fields: [sessionId], references: [sessionId])
+  
+  pageUrl       String
+  pageTitle     String?
+  pageType      String?  // "homepage", "product", "collection", "cart", "checkout"
+  
+  // Page interaction
+  timeOnPage    Int?     // seconds
+  scrollPercentage Int?
+  exitPage      Boolean  @default(false)
+  
+  timestamp     DateTime @default(now())
+  
+  @@index([sessionId])
+  @@index([pageType])
+}
+
+// Enhanced popup analytics
+model PopupAnalytics {
+  id            String   @id @default(cuid())
+  popupId       String
+  popup         Popup    @relation(fields: [popupId], references: [id], onDelete: Cascade)
+  sessionId     String
+  userSession   UserSession @relation(fields: [sessionId], references: [sessionId])
+  
+  event         String   // "view", "interaction", "conversion", "close", "step_completed"
+  stepNumber    Int?     // For multi-step popups
+  
+  // Context
+  pageUrl       String
+  pageType      String?
+  deviceType    String?
+  
+  // Timing
+  timeToShow    Int?     // ms after page load
+  timeToAction  Int?     // ms from show to action
+  
+  timestamp     DateTime @default(now())
+  
+  @@index([popupId, event])
+  @@index([sessionId])
+  @@index([timestamp])
+}
+
+// Quiz/poll responses (zero-party data)
+model QuizResponse {
+  id            String   @id @default(cuid())
+  popupId       String
+  popup         Popup    @relation(fields: [popupId], references: [id], onDelete: Cascade)
+  sessionId     String
+  userSession   UserSession @relation(fields: [sessionId], references: [sessionId])
+  
+  questionId    String   // Step ID in multi-step popup
+  question      String
+  selectedAnswers Json   // Array of selected options
+  responseTime  Int?     // Time to answer in seconds
+  stepOrder     Int      // Which step in the flow
+  
+  timestamp     DateTime @default(now())
+  
+  @@index([popupId])
+  @@index([sessionId])
+}
+
+// Email capture with enriched data
+model EmailCapture {
+  id            String   @id @default(cuid())
+  popupId       String
+  popup         Popup    @relation(fields: [popupId], references: [id], onDelete: Cascade)
+  sessionId     String
+  userSession   UserSession @relation(fields: [sessionId], references: [sessionId])
+  
+  email         String
+  firstName     String?
+  lastName      String?
+  
+  // Context of capture
+  quizData      Json?    // Associated quiz responses
+  discountGiven String?
+  discountUsed  Boolean  @default(false)
+  
+  // Lifecycle
+  emailVerified Boolean  @default(false)
+  unsubscribed  Boolean  @default(false)
+  
+  timestamp     DateTime @default(now())
+  
+  @@index([popupId])
+  @@index([email])
+  @@index([sessionId])
+}
