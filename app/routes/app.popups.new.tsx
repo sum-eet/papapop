@@ -37,35 +37,75 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
-  const formData = await request.formData();
+  console.log("🚀 POPUP CREATION ACTION STARTED");
+  console.log("Request method:", request.method);
+  console.log("Request URL:", request.url);
+  console.log("Request headers:", Object.fromEntries(request.headers.entries()));
   
   try {
+    console.log("🔐 Starting authentication...");
+    const { session } = await authenticate.admin(request);
+    console.log("✅ Authentication successful");
+    console.log("Session object:", {
+      shop: session.shop,
+      id: session.id,
+      state: session.state,
+      scope: session.scope,
+      isOnline: session.isOnline,
+      expires: session.expires,
+      accessToken: session.accessToken ? "***EXISTS***" : "MISSING"
+    });
+    
+    const shop = session.shop;
+    console.log("🏪 Shop identified:", shop);
+    
+    console.log("📋 Parsing form data...");
+    const formData = await request.formData();
+    console.log("Form data entries:", Object.fromEntries(formData.entries()));
+    
+    console.log("🎯 Creating popup data object...");
     const popupData = {
       shop,
-      title: formData.get("title"),
-      popupType: formData.get("popupType"),
-      triggerType: formData.get("triggerType") || "delay",
-      triggerValue: parseInt(formData.get("triggerValue")) || 3,
-      heading: formData.get("heading"),
-      description: formData.get("description"),
-      buttonText: formData.get("buttonText") || "Get Started",
-      discountCode: formData.get("discountCode"),
-      steps: formData.get("steps") ? JSON.parse(formData.get("steps")) : null,
-      position: formData.get("position") || "center",
-      targetPages: formData.get("targetPages") ? JSON.parse(formData.get("targetPages")) : ["homepage"],
-      targetDevices: formData.get("targetDevices") ? JSON.parse(formData.get("targetDevices")) : ["desktop", "mobile"],
+      title: String(formData.get("title") || ""),
+      popupType: String(formData.get("popupType") || "single_step"),
+      triggerType: String(formData.get("triggerType") || "delay"),
+      triggerValue: parseInt(String(formData.get("triggerValue") || "3"), 10),
+      heading: String(formData.get("heading") || ""),
+      description: formData.get("description") ? String(formData.get("description")) : null,
+      buttonText: String(formData.get("buttonText") || "Get Started"),
+      discountCode: formData.get("discountCode") ? String(formData.get("discountCode")) : null,
+      steps: formData.get("steps") ? JSON.parse(String(formData.get("steps"))) : null,
+      position: String(formData.get("position") || "center"),
+      targetPages: formData.get("targetPages") ? JSON.parse(String(formData.get("targetPages"))) : ["homepage"],
+      targetDevices: formData.get("targetDevices") ? JSON.parse(String(formData.get("targetDevices"))) : ["desktop", "mobile"],
       isActive: true,
+      isDeleted: false,
     };
-
+    console.log("📊 Popup data prepared:", popupData);
+    
+    console.log("💾 Saving to database...");
     const popup = await prisma.popup.create({
       data: popupData,
     });
-
-    return redirect(`/app/popups/${popup.id}`);
+    console.log("✅ Popup created successfully:", popup.id);
+    
+    console.log("🔄 Redirecting to /app/popups");
+    return redirect(`/app/popups`);
+    
   } catch (error) {
-    console.error("Failed to create popup:", error);
+    console.error("❌ POPUP CREATION ERROR:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      cause: error.cause
+    });
+    
+    if (error.message?.includes("redirect") || error.message?.includes("auth")) {
+      console.error("🔐 AUTHENTICATION ERROR DETECTED");
+      console.error("This might be an auth redirect issue");
+    }
+    
     return json({ error: "Failed to create popup" }, { status: 500 });
   }
 };
@@ -119,6 +159,11 @@ export default function NewPopup() {
   const actionData = useActionData();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  
+  // Log navigation state changes
+  console.log("📊 Navigation state:", navigation.state);
+  console.log("📊 Action data:", actionData);
+  console.log("📊 Is submitting:", isSubmitting);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -423,6 +468,12 @@ export default function NewPopup() {
   );
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    console.log("🎯 FORM SUBMIT STARTED (CLIENT-SIDE)");
+    console.log("Form data state:", formData);
+    console.log("Steps data:", steps);
+    console.log("Current URL:", window.location.href);
+    console.log("User agent:", navigator.userAgent);
+    
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -432,6 +483,12 @@ export default function NewPopup() {
     formData.set("targetPages", JSON.stringify(formData.targetPages));
     formData.set("targetDevices", JSON.stringify(formData.targetDevices));
     
+    console.log("📋 Final form data being submitted:");
+    for (const [key, value] of formData.entries()) {
+      console.log(`  ${key}:`, value);
+    }
+    
+    console.log("🚀 Submitting form...");
     // Submit form
     form.submit();
   };

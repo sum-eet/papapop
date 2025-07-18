@@ -38,6 +38,7 @@ model Popup {
   shop          String
   title         String
   isActive      Boolean  @default(true)
+  isDeleted     Boolean  @default(false)
   
   // Popup type and steps
   popupType     String   @default("single_step") // "single_step", "multi_step"
