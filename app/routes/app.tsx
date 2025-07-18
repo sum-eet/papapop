@@ -63,6 +63,7 @@ export default function App() {
         </Link>
         <Link to="/app/popups">Popups</Link>
         <Link to="/app/popups/new">Create Popup</Link>
+        <Link to="/app/install-script">Install Script</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
