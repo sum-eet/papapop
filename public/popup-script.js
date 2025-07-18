@@ -7,6 +7,25 @@
 (function() {
   'use strict';
 
+  // Detailed logging system
+  const log = {
+    info: (message, data = {}) => {
+      console.log(`🎯 [PapaPop] ${message}`, data);
+    },
+    error: (message, error = {}) => {
+      console.error(`❌ [PapaPop] ${message}`, error);
+    },
+    warn: (message, data = {}) => {
+      console.warn(`⚠️ [PapaPop] ${message}`, data);
+    },
+    debug: (message, data = {}) => {
+      console.debug(`🔍 [PapaPop] ${message}`, data);
+    },
+    customer: (message, data = {}) => {
+      console.log(`👤 [PapaPop Customer] ${message}`, data);
+    }
+  };
+
   // Global configuration
   const CONFIG = {
     API_BASE: 'https://papapop.vercel.app',
@@ -14,6 +33,18 @@
     RETRY_DELAYS: [1000, 2000, 4000, 8000],
     MAX_RETRIES: 4,
   };
+
+  log.info('Script initialization started');
+  log.debug('Environment details', {
+    hostname: window.location.hostname,
+    href: window.location.href,
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString(),
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight
+    }
+  });
 
   // Utility functions
   const utils = {
@@ -34,9 +65,21 @@
 
     // Detect if running in Shopify admin
     isShopifyAdmin() {
-      return window.top !== window.self || 
-             window.location.hostname.includes('shopify.com') ||
-             window.location.pathname.includes('/admin');
+      const isIframe = window.top !== window.self;
+      const isShopifyDomain = window.location.hostname.includes('shopify.com');
+      const isAdminPath = window.location.pathname.includes('/admin');
+      const isAdmin = isIframe || isShopifyDomain || isAdminPath;
+      
+      log.debug('Admin detection check', {
+        isIframe,
+        isShopifyDomain,
+        isAdminPath,
+        isAdmin,
+        hostname: window.location.hostname,
+        pathname: window.location.pathname
+      });
+      
+      return isAdmin;
     },
 
     // Get current shop domain
@@ -159,33 +202,62 @@
     }
 
     async init() {
+      log.info('PopupManager initialization started');
+      
       // Don't run in Shopify admin
       if (utils.isShopifyAdmin()) {
+        log.warn('Skipping popup initialization - running in admin environment');
         return;
       }
 
+      log.customer('PapaPop is loading on your store!');
+      
       // Load popup configurations
+      log.info('Loading popup configurations...');
       await this.loadConfigs();
       
       // Set up triggers
+      log.info('Setting up popup triggers...');
       this.setupTriggers();
       
       // Start queue processing
+      log.info('Starting background sync queue processing...');
       utils.processQueue();
+      
+      log.info('PopupManager initialization completed successfully');
     }
 
     async loadConfigs() {
       try {
         const shop = utils.getShopDomain();
-        const response = await fetch(`${CONFIG.API_BASE}/api/popup-config?shop=${shop}`);
+        log.info('Fetching popup configurations', { shop });
+        
+        const url = `${CONFIG.API_BASE}/api/popup-config?shop=${shop}`;
+        log.debug('Making API request', { url });
+        
+        const response = await fetch(url);
+        log.debug('API response received', { 
+          status: response.status, 
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
         const data = await response.json();
+        log.debug('API response data', data);
         
         if (data.success) {
           this.configs = data.configs;
+          log.info('Popup configurations loaded successfully', { 
+            count: this.configs.length,
+            configs: this.configs.map(c => ({ id: c.id, title: c.title, triggerType: c.triggerType }))
+          });
+          
           this.filterApplicablePopups();
+        } else {
+          log.warn('API returned unsuccessful response', data);
         }
       } catch (error) {
-        console.error('Failed to load popup configs:', error);
+        log.error('Failed to load popup configs', error);
       }
     }
 
@@ -193,31 +265,54 @@
       const deviceType = utils.getDeviceType();
       const pageType = utils.getPageType();
       
+      log.info('Filtering applicable popups', {
+        deviceType,
+        pageType,
+        totalConfigs: this.configs.length
+      });
+      
+      const originalConfigs = [...this.configs];
+      
       this.configs = this.configs.filter(config => {
-        // Device targeting
-        if (config.targetDevices && config.targetDevices.length > 0) {
-          if (!config.targetDevices.includes(deviceType)) {
-            return false;
-          }
-        }
-        
-        // Page targeting
-        if (config.targetPages && config.targetPages.length > 0) {
-          if (!config.targetPages.includes(pageType)) {
-            return false;
-          }
-        }
+        const deviceMatch = !config.targetDevices || config.targetDevices.length === 0 || config.targetDevices.includes(deviceType);
+        const pageMatch = !config.targetPages || config.targetPages.length === 0 || config.targetPages.includes(pageType);
         
         // Session repeat logic
+        let sessionMatch = true;
         if (!config.repeatInSession) {
           const viewCount = this.getPopupViewCount(config.id);
-          if (viewCount >= config.maxViewsPerSession) {
-            return false;
-          }
+          sessionMatch = viewCount < config.maxViewsPerSession;
         }
         
-        return true;
+        const shouldShow = deviceMatch && pageMatch && sessionMatch;
+        
+        log.debug('Popup filtering check', {
+          popupId: config.id,
+          title: config.title,
+          deviceMatch,
+          pageMatch,
+          sessionMatch,
+          shouldShow,
+          targetDevices: config.targetDevices,
+          targetPages: config.targetPages,
+          viewCount: this.getPopupViewCount(config.id),
+          maxViews: config.maxViewsPerSession
+        });
+        
+        return shouldShow;
       });
+      
+      log.info('Popup filtering completed', {
+        originalCount: originalConfigs.length,
+        filteredCount: this.configs.length,
+        applicablePopups: this.configs.map(c => ({ id: c.id, title: c.title, triggerType: c.triggerType }))
+      });
+      
+      if (this.configs.length === 0) {
+        log.customer('No popups are configured to show on this page');
+      } else {
+        log.customer(`Found ${this.configs.length} popup(s) that may show on this page`);
+      }
     }
 
     getPopupViewCount(popupId) {
@@ -232,23 +327,43 @@
     }
 
     setupTriggers() {
+      log.info('Setting up popup triggers', {
+        totalConfigs: this.configs.length,
+        triggerTypes: this.configs.map(c => c.triggerType)
+      });
+      
       this.configs.forEach(config => {
+        log.debug('Setting up trigger', {
+          popupId: config.id,
+          title: config.title,
+          triggerType: config.triggerType,
+          triggerValue: config.triggerValue
+        });
+        
         switch (config.triggerType) {
           case 'delay':
             this.triggers.delay.add(config);
-            setTimeout(() => this.showPopup(config), config.triggerValue * 1000);
+            const delay = config.triggerValue * 1000;
+            log.customer(`Popup "${config.title}" will show in ${config.triggerValue} seconds`);
+            setTimeout(() => {
+              log.info('Delay trigger fired', { popupId: config.id, title: config.title });
+              this.showPopup(config);
+            }, delay);
             break;
           case 'scroll':
             this.triggers.scroll.add(config);
+            log.customer(`Popup "${config.title}" will show when you scroll ${config.triggerValue}% down the page`);
             break;
           case 'exit':
             this.triggers.exit.add(config);
+            log.customer(`Popup "${config.title}" will show when you try to leave the page`);
             break;
         }
       });
 
       // Set up scroll listener
       if (this.triggers.scroll.size > 0) {
+        log.info('Setting up scroll listener', { scrollTriggersCount: this.triggers.scroll.size });
         window.addEventListener('scroll', utils.debounce(() => {
           this.checkScrollTriggers();
         }, 100));
@@ -256,8 +371,10 @@
 
       // Set up exit intent listener
       if (this.triggers.exit.size > 0) {
+        log.info('Setting up exit intent listener', { exitTriggersCount: this.triggers.exit.size });
         document.addEventListener('mouseleave', (e) => {
           if (e.clientY <= 0) {
+            log.debug('Exit intent detected', { clientY: e.clientY });
             this.checkExitTriggers();
           }
         });
@@ -267,16 +384,39 @@
     checkScrollTriggers() {
       const scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
       
+      log.debug('Checking scroll triggers', {
+        scrollPercent: scrollPercent.toFixed(2),
+        scrollY: window.scrollY,
+        bodyHeight: document.body.scrollHeight,
+        windowHeight: window.innerHeight,
+        activePopups: Array.from(this.activePopups.keys())
+      });
+      
       this.triggers.scroll.forEach(config => {
         if (scrollPercent >= config.triggerValue && !this.activePopups.has(config.id)) {
+          log.info('Scroll trigger activated', {
+            popupId: config.id,
+            title: config.title,
+            scrollPercent: scrollPercent.toFixed(2),
+            targetPercent: config.triggerValue
+          });
           this.showPopup(config);
         }
       });
     }
 
     checkExitTriggers() {
+      log.info('Checking exit triggers', {
+        exitTriggersCount: this.triggers.exit.size,
+        activePopups: Array.from(this.activePopups.keys())
+      });
+      
       this.triggers.exit.forEach(config => {
         if (!this.activePopups.has(config.id)) {
+          log.info('Exit trigger activated', {
+            popupId: config.id,
+            title: config.title
+          });
           this.showPopup(config);
         }
       });
@@ -284,8 +424,18 @@
 
     showPopup(config) {
       if (this.activePopups.has(config.id)) {
+        log.debug('Popup already active, skipping', { popupId: config.id });
         return;
       }
+
+      log.info('Showing popup', {
+        popupId: config.id,
+        title: config.title,
+        triggerType: config.triggerType,
+        position: config.position
+      });
+      
+      log.customer(`🎉 Popup "${config.title}" is now showing!`);
 
       // Track view
       this.trackEvent(config.id, 'view');
@@ -300,6 +450,8 @@
     closePopup(popupId) {
       const popup = this.activePopups.get(popupId);
       if (popup) {
+        log.info('Closing popup', { popupId });
+        log.customer('Popup closed');
         popup.destroy();
         this.activePopups.delete(popupId);
       }
@@ -317,6 +469,8 @@
         ...data
       };
 
+      log.debug('Tracking event', eventData);
+      
       // Queue for background sync
       utils.queueData('analytics', eventData);
     }
@@ -333,6 +487,12 @@
     }
 
     render() {
+      log.info('Rendering popup', { 
+        popupId: this.config.id,
+        title: this.config.title,
+        popupType: this.config.popupType
+      });
+      
       this.createElement();
       this.attachEventListeners();
       this.show();
@@ -431,6 +591,7 @@
       const closeBtn = this.element.querySelector('[data-action="close"]');
       if (closeBtn) {
         closeBtn.addEventListener('click', () => {
+          log.customer('User clicked close button');
           this.manager.trackEvent(this.config.id, 'close');
           this.destroy();
         });
@@ -441,6 +602,7 @@
       quizOptions.forEach(option => {
         option.addEventListener('click', (e) => {
           const value = e.target.dataset.value;
+          log.customer(`User selected quiz answer: "${value}"`);
           this.handleQuizAnswer(value);
         });
       });
@@ -449,6 +611,7 @@
       const submitBtn = this.element.querySelector('[data-action="submit"]');
       if (submitBtn) {
         submitBtn.addEventListener('click', () => {
+          log.customer('User clicked submit button');
           this.handleSubmit();
         });
       }
@@ -458,6 +621,7 @@
       if (emailInput) {
         emailInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
+            log.customer('User pressed Enter to submit');
             this.handleSubmit();
           }
         });
@@ -466,6 +630,7 @@
       // Overlay click to close
       this.element.addEventListener('click', (e) => {
         if (e.target === this.element) {
+          log.customer('User clicked outside popup to close');
           this.manager.trackEvent(this.config.id, 'close');
           this.destroy();
         }
@@ -476,6 +641,14 @@
       // Store answer with optimistic UI
       const steps = this.config.steps || [];
       const currentStepData = steps[this.currentStep];
+      
+      log.info('Processing quiz answer', {
+        popupId: this.config.id,
+        currentStep: this.currentStep,
+        totalSteps: steps.length,
+        question: currentStepData.question,
+        answer: value
+      });
       
       if (!this.userData.quizAnswers) {
         this.userData.quizAnswers = [];
@@ -509,6 +682,7 @@
 
       // Move to next step immediately (optimistic UI)
       this.currentStep++;
+      log.customer(`Moving to step ${this.currentStep + 1} of ${steps.length}`);
       this.updateContent();
     }
 
@@ -516,11 +690,19 @@
       const emailInput = this.element.querySelector('.papapop-email');
       const email = emailInput?.value.trim();
 
+      log.info('Processing email submission', {
+        popupId: this.config.id,
+        email: email ? email.replace(/./g, '*') : 'empty', // Hide actual email for privacy
+        hasEmail: !!email
+      });
+
       if (!email || !this.isValidEmail(email)) {
+        log.customer('Invalid email address entered');
         this.showError('Please enter a valid email address');
         return;
       }
 
+      log.customer('Email submitted successfully! 🎉');
       // Show success immediately (optimistic UI)
       this.showSuccess();
 
@@ -830,18 +1012,25 @@
 
   // Initialize when DOM is ready
   function init() {
+    log.info('Initializing PapaPop system');
+    log.debug('DOM ready state', { readyState: document.readyState });
+    
     if (document.readyState === 'loading') {
+      log.debug('DOM not ready, waiting for DOMContentLoaded');
       document.addEventListener('DOMContentLoaded', () => {
+        log.info('DOM loaded, starting PapaPop');
         injectCSS();
         new PopupManager();
       });
     } else {
+      log.info('DOM already loaded, starting PapaPop immediately');
       injectCSS();
       new PopupManager();
     }
   }
 
   // Start the system
+  log.info('Starting PapaPop script initialization');
   init();
 
   // Expose for debugging
