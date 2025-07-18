@@ -249,7 +249,7 @@
           this.configs = data.configs;
           log.info('Popup configurations loaded successfully', { 
             count: this.configs.length,
-            configs: this.configs.map(c => ({ id: c.id, title: c.title, triggerType: c.triggerType }))
+            configs: this.configs.map(c => ({ id: c.id, title: c.title || c.heading || 'No title', triggerType: c.triggerType }))
           });
           
           this.filterApplicablePopups();
@@ -288,7 +288,7 @@
         
         log.debug('Popup filtering check', {
           popupId: config.id,
-          title: config.title,
+          title: config.title || config.heading || 'No title',
           deviceMatch,
           pageMatch,
           sessionMatch,
@@ -305,7 +305,7 @@
       log.info('Popup filtering completed', {
         originalCount: originalConfigs.length,
         filteredCount: this.configs.length,
-        applicablePopups: this.configs.map(c => ({ id: c.id, title: c.title, triggerType: c.triggerType }))
+        applicablePopups: this.configs.map(c => ({ id: c.id, title: c.title || c.heading || 'No title', triggerType: c.triggerType }))
       });
       
       if (this.configs.length === 0) {
@@ -335,7 +335,7 @@
       this.configs.forEach(config => {
         log.debug('Setting up trigger', {
           popupId: config.id,
-          title: config.title,
+          title: config.title || config.heading || 'No title',
           triggerType: config.triggerType,
           triggerValue: config.triggerValue
         });
@@ -344,19 +344,19 @@
           case 'delay':
             this.triggers.delay.add(config);
             const delay = config.triggerValue * 1000;
-            log.customer(`Popup "${config.title}" will show in ${config.triggerValue} seconds`);
+            log.customer(`Popup "${config.title || config.heading || 'Welcome popup'}" will show in ${config.triggerValue} seconds`);
             setTimeout(() => {
-              log.info('Delay trigger fired', { popupId: config.id, title: config.title });
+              log.info('Delay trigger fired', { popupId: config.id, title: config.title || config.heading || 'No title' });
               this.showPopup(config);
             }, delay);
             break;
           case 'scroll':
             this.triggers.scroll.add(config);
-            log.customer(`Popup "${config.title}" will show when you scroll ${config.triggerValue}% down the page`);
+            log.customer(`Popup "${config.title || config.heading || 'Welcome popup'}" will show when you scroll ${config.triggerValue}% down the page`);
             break;
           case 'exit':
             this.triggers.exit.add(config);
-            log.customer(`Popup "${config.title}" will show when you try to leave the page`);
+            log.customer(`Popup "${config.title || config.heading || 'Welcome popup'}" will show when you try to leave the page`);
             break;
         }
       });
@@ -396,7 +396,7 @@
         if (scrollPercent >= config.triggerValue && !this.activePopups.has(config.id)) {
           log.info('Scroll trigger activated', {
             popupId: config.id,
-            title: config.title,
+            title: config.title || config.heading || 'No title',
             scrollPercent: scrollPercent.toFixed(2),
             targetPercent: config.triggerValue
           });
@@ -415,7 +415,7 @@
         if (!this.activePopups.has(config.id)) {
           log.info('Exit trigger activated', {
             popupId: config.id,
-            title: config.title
+            title: config.title || config.heading || 'No title'
           });
           this.showPopup(config);
         }
@@ -430,12 +430,12 @@
 
       log.info('Showing popup', {
         popupId: config.id,
-        title: config.title,
+        title: config.title || config.heading || 'No title',
         triggerType: config.triggerType,
         position: config.position
       });
       
-      log.customer(`🎉 Popup "${config.title}" is now showing!`);
+      log.customer(`🎉 Popup "${config.title || config.heading || 'Welcome popup'}" is now showing!`);
 
       // Track view
       this.trackEvent(config.id, 'view');
@@ -489,7 +489,7 @@
     render() {
       log.info('Rendering popup', { 
         popupId: this.config.id,
-        title: this.config.title,
+        title: this.config.title || this.config.heading || 'No title',
         popupType: this.config.popupType
       });
       
