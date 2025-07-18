@@ -11,6 +11,7 @@ export const config = {
 
 interface PopupConfig {
   id: string;
+  title: string;
   popupType: string;
   triggerType: string;
   triggerValue: number;
@@ -47,6 +48,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       },
       select: {
         id: true,
+        title: true,
         popupType: true,
         triggerType: true,
         triggerValue: true,
@@ -73,6 +75,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     // Format response for minimal payload
     const configs: PopupConfig[] = popups.map((popup) => ({
       id: popup.id,
+      title: popup.title,
       popupType: popup.popupType,
       triggerType: popup.triggerType,
       triggerValue: popup.triggerValue,
