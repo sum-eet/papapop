@@ -31,6 +31,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const shop = url.searchParams.get("shop");
 
+  console.log("🔍 API Request for popup configs:", { shop, url: request.url });
+
   if (!shop) {
     return json({ error: "Shop parameter is required" }, { status: 400 });
   }
@@ -41,6 +43,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       where: {
         shop: shop,
         isActive: true,
+        isDeleted: false,
       },
       select: {
         id: true,
@@ -59,6 +62,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
         steps: true,
         theme: true,
       },
+    });
+
+    console.log("📊 Database query result:", { 
+      shop, 
+      popupCount: popups.length,
+      popups: popups.map(p => ({ id: p.id, triggerType: p.triggerType, targetPages: p.targetPages }))
     });
 
     // Format response for minimal payload
