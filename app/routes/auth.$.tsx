@@ -4,23 +4,29 @@ import { authenticate } from "../shopify.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   console.log("🔐 AUTH CALLBACK STARTED");
   console.log("Auth request URL:", request.url);
-  console.log("Auth request method:", request.method);
-  console.log("Auth request headers:", Object.fromEntries(request.headers.entries()));
   
   try {
     console.log("🔑 Processing authentication...");
-    const result = await authenticate.admin(request);
-    console.log("✅ Authentication processed successfully");
-    console.log("Auth result:", result);
+    await authenticate.admin(request);
+    console.log("✅ Authentication successful - redirecting to app");
     
-    return null;
+    // After successful auth, redirect to the app
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: "/app"
+      }
+    });
+    
   } catch (error) {
     console.error("❌ AUTH CALLBACK ERROR:", error);
-    console.error("Error details:", {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
+    
+    // If auth fails, redirect back to install
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: "/"
+      }
     });
-    throw error;
   }
 };
