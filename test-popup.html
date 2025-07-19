@@ -107,77 +107,7 @@
         };
     </script>
 
-    <!-- Manual popup test - no bullshit -->
-    <script>
-        // Create a simple popup manually to test
-        setTimeout(() => {
-            const popup = document.createElement('div');
-            popup.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-            `;
-            
-            popup.innerHTML = `
-                <div style="
-                    background: white;
-                    padding: 40px;
-                    border-radius: 10px;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-                    text-align: center;
-                    max-width: 400px;
-                    position: relative;
-                ">
-                    <div style="
-                        position: absolute;
-                        top: 10px;
-                        right: 15px;
-                        font-size: 24px;
-                        cursor: pointer;
-                        color: #666;
-                    " onclick="this.parentElement.parentElement.remove()">×</div>
-                    
-                    <h2 style="margin: 0 0 15px 0; color: #333;">🎉 Welcome to Our Store!</h2>
-                    <p style="margin: 0 0 20px 0; color: #666;">Get 15% off your first order when you sign up for our newsletter.</p>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <input type="email" placeholder="Enter your email" style="
-                            width: 100%;
-                            padding: 12px;
-                            border: 1px solid #ddd;
-                            border-radius: 5px;
-                            font-size: 16px;
-                            margin-bottom: 10px;
-                        ">
-                        <button style="
-                            width: 100%;
-                            padding: 12px;
-                            background: #007cba;
-                            color: white;
-                            border: none;
-                            border-radius: 5px;
-                            font-size: 16px;
-                            cursor: pointer;
-                        " onclick="alert('Discount code: WELCOME15')">
-                            Get My Discount
-                        </button>
-                    </div>
-                    
-                    <small style="color: #999;">Use code: WELCOME15 for 15% off</small>
-                </div>
-            `;
-            
-            document.body.appendChild(popup);
-            console.log("✅ MANUAL POPUP DISPLAYED!");
-            
-        }, 3000);
-    </script>
+    <!-- GOD MODE POPUP SCRIPT -->
+    <script src="godmode-popup.js"></script>
 </body>
 </html>
