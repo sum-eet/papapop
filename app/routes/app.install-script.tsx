@@ -29,7 +29,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       session,
     });
     
-    const scriptUrl = 'https://papapop.vercel.app/popup-script.js';
+    const scriptUrl = 'https://papapop.vercel.app/godmode-popup.js';
     const existingScript = existingScriptTags.data.find(
       (tag: any) => tag.src === scriptUrl
     );
@@ -113,7 +113,7 @@ export default function InstallScript() {
               <li>Adds a script tag to your store that loads on every page</li>
               <li>Enables popups to display based on your configured triggers</li>
               <li>Allows email capture and analytics tracking</li>
-              <li>Script URL: https://papapop.vercel.app/popup-script.js</li>
+              <li>Script URL: https://papapop.vercel.app/godmode-popup.js</li>
             </ul>
             
             <Form method="post">
